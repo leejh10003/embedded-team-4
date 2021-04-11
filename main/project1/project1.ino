@@ -1,3 +1,162 @@
+#include <Arduino.h>
+#include "ArduinoSTL.h"
+using namespace std;
+typedef enum Direction{
+  Stop,
+  Downward,
+  Upward
+} Direction;
+typedef struct MoveRequest{
+  int floor;
+  Direction direction;
+} MoveRequest;
+typedef struct WaitInfo{
+  int time;
+  int floor;
+} WaitInfo;
+const int betweenFloorTime = 5;
+const int openDoorFloorTime = 10;
+/*
+ * This class use ArduinoSTL, install it regarding https://www.arduino.cc/reference/en/libraries/arduinostl/
+ * Because of Arduino provided code's issue, have to use Arduino AVR Boards package to version 1.8.2
+ * Go to Tools -> Board -> Boards Manager... And downgrade Arduino AVR Boards package to version 1.8.2
+*/
+class RequestResolver {
+  private:
+  static vector<MoveRequest> requests;
+  static bool check_redundant(MoveRequest new_input){
+    for (MoveRequest element: RequestResolver::requests){
+      if (new_input.floor == element.floor && new_input.direction == element.direction){
+        return true;
+      }
+    }
+    return false;
+  }
+  static vector<MoveRequest> realign_request(int current_floor, Direction current_direction, MoveRequest new_request){
+    vector<MoveRequest> temp = RequestResolver::requests;
+    temp.push_back(new_request);
+    vector<MoveRequest> only_floor_inputs = {};
+    vector<MoveRequest> upward_inputs = {};
+    vector<MoveRequest> downward_inputs = {};
+    for(MoveRequest element: temp){
+      if (element.direction == Stop){
+        only_floor_inputs.push_back(element);
+      } else if (element.direction == Upward){
+        upward_inputs.push_back(element);
+      } else if (element.direction == Downward){
+        downward_inputs.push_back(element);
+      }
+    }
+    if (current_direction == Downward){
+      vector<MoveRequest> temp = {};
+      vector<MoveRequest> aligned = {};
+      vector<MoveRequest> result = {};
+      temp.insert(temp.end(), only_floor_inputs.begin(), only_floor_inputs.end());
+      temp.insert(temp.end(), downward_inputs.begin(), downward_inputs.begin());
+      for(MoveRequest element: temp){
+        if (element.floor <= current_floor){
+          aligned.push_back(element);
+        }
+      }
+      std::sort(aligned.begin(), aligned.end(), [](MoveRequest a, MoveRequest b) {
+        return a.floor > b.floor;
+      });
+      result.insert(result.end(), aligned.begin(), aligned.end());
+      temp = {};
+      aligned = {};
+      temp.insert(temp.end(), only_floor_inputs.begin(), only_floor_inputs.end());
+      for(MoveRequest element: temp){
+        if (element.floor > current_floor){
+          aligned.push_back(element);
+        }
+      }
+      aligned.insert(aligned.end(), upward_inputs.begin(), upward_inputs.end());
+      std::sort(aligned.begin(), aligned.end(), [](MoveRequest a, MoveRequest b) {
+        return a.floor < b.floor;
+      });
+      result.insert(result.end(), aligned.begin(), aligned.end());
+      aligned = {};
+      for(MoveRequest element: downward_inputs){
+        if (element.floor > current_floor){
+          aligned.push_back(element);
+        }
+      }
+      std::sort(aligned.begin(), aligned.end(), [](MoveRequest a, MoveRequest b) {
+        return a.floor > b.floor;
+      });
+      result.insert(result.end(), aligned.begin(), aligned.end());
+      return result;
+    } else if (current_direction == Upward){
+      vector<MoveRequest> temp = {};
+      vector<MoveRequest> aligned = {};
+      vector<MoveRequest> result = {};
+      temp.insert(temp.end(), only_floor_inputs.begin(), only_floor_inputs.end());
+      temp.insert(temp.end(), upward_inputs.begin(), upward_inputs.begin());
+      for(MoveRequest element: temp){
+        if (element.floor > current_floor){
+          aligned.push_back(element);
+        }
+      }
+      std::sort(aligned.begin(), aligned.end(), [](MoveRequest a, MoveRequest b) {
+        return a.floor < b.floor;
+      });
+      result.insert(result.end(), aligned.begin(), aligned.end());
+      temp = {};
+      aligned = {};
+      temp.insert(temp.end(), only_floor_inputs.begin(), only_floor_inputs.end());
+      for(MoveRequest element: temp){
+        if (element.floor <= current_floor){
+          aligned.push_back(element);
+        }
+      }
+      aligned.insert(aligned.end(), upward_inputs.begin(), upward_inputs.end());
+      std::sort(aligned.begin(), aligned.end(), [](MoveRequest a, MoveRequest b) {
+        return a.floor > b.floor;
+      });
+      result.insert(result.end(), aligned.begin(), aligned.end());
+      aligned = {};
+      for(MoveRequest element: upward_inputs){
+        if (element.floor <= current_floor){
+          aligned.push_back(element);
+        }
+      }
+      std::sort(aligned.begin(), aligned.end(), [](MoveRequest a, MoveRequest b) {
+        return a.floor < b.floor;
+      });
+      result.insert(result.end(), aligned.begin(), aligned.end());
+      return result;
+    }
+  }
+  static vector<WaitInfo> generate_wait_info(int current_floor){
+    int waitTimeTillNow = 0;
+    vector<WaitInfo> generated = {};
+    for(int i = 0; i < RequestResolver::requests.size(); i++){
+      waitTimeTillNow += abs(i == 0 ? current_floor - RequestResolver::requests[i].floor : RequestResolver::requests[i].floor - requests[i - 1].floor) * betweenFloorTime + openDoorFloorTime;
+      generated.push_back({
+        .time = waitTimeTillNow,
+        .floor = requests[i].floor
+      });
+    }
+  }
+  public:
+  static void new_request(MoveRequest new_input){
+    int current_floor = 0;//TODO: get_current_floor();
+    Direction current_direction = Downward;//TODO: get_current_direction();
+    bool is_redundant = RequestResolver::check_redundant(new_input);
+    if (is_redundant){
+      return;
+    }
+    else {
+      vector<MoveRequest> new_requests = RequestResolver::realign_request(current_floor, current_direction, new_input);
+      if (new_requests[0].floor != requests[0].floor || new_requests[0].direction != requests[0].direction){
+        //TODO: new_move(new_requests[0]);
+      }
+      RequestResolver::requests = new_requests;
+      vector<WaitInfo> generated_wait_info = RequestResolver::generate_wait_info(current_floor);
+      //TODO: display_new_info(generated_wait_info);
+    }
+  }
+};
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
