@@ -7,7 +7,7 @@ void setup() {
 
   StaticJsonDocument<200> doc;
 
-  char json[] = "{\"food\":[],\"shelf_life\":[]}";
+  char json[] = "{\"food\":\'\',\"shelf_life\":\'\'}";
 
   auto error = deserializeJson(doc, json);
   if (error) {
@@ -16,10 +16,10 @@ void setup() {
     return;
   }
   const char* food = doc["food"];
-  int latitude = doc["shelf_life"];
+  const char* sh_life = doc["shelf_life"];
 
   Serial.println(food);
-  Serial.println(latitude, 6);
+  Serial.println(sh_life);
 }
 
 void loop() {
