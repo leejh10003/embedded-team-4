@@ -1,25 +1,21 @@
 #include <ArduinoJson.h>
+#include <WiFi101.h>
+#include <SPI.h>
 
-using namespace std;
+char ssid[] = "TURTLE";
+char pass[] = "yesican1";
+int keyIndex = 0;
+
+int status = WL_IDLE_STATUS;
+WiFiServer server(80);
+
 void setup() {
-  Serial.begin(9600);
-  while (!Serial) continue;
+  WiFi.setPins(8, 7, 4, 2);
 
-  StaticJsonDocument<200> doc;
-
-  char json[] = "{\"food\":\'\',\"shelf_life\":\'\'}";
-
-  auto error = deserializeJson(doc, json);
-  if (error) {
-    Serial.print(F("deserializeJson() failed with cod "));
-    Serial.println(error.c_str());
-    return;
+  if(WiFi.status() == WL_NO_SHIELD){
+    Serial.println("WiFi shield not present");
+    while (true);
   }
-  const char* food = doc["food"];
-  const char* sh_life = doc["shelf_life"];
-
-  Serial.println(food);
-  Serial.println(sh_life);
 }
 
 void loop() {
