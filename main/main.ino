@@ -101,8 +101,7 @@ void loop()
     char c = client.read();
     if(c == '\r') break;
     Serial.write(c);
-    d += c;
-    
+    d += c;   
   }
 
   // if the server's disconnected, stop the client
@@ -131,5 +130,8 @@ void loop()
   stock[index].maxavailable = doc["max_availability"];
 
   index++;
+  }
+  else{
+    index = 0;
   }
 }
