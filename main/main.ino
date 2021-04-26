@@ -134,4 +134,10 @@ void loop()
   else{
     index = 0;
   }
+
+  for(int i = 0; i < index; i++){
+    if(){//남은 시간이 얼마 안 남았을 때){
+      // 재고정보 display 표시
+    }
+  }
 }
