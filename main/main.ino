@@ -99,8 +99,10 @@ void loop()
   const char* d;
   while (client.available()) {
     char c = client.read();
+    if(c == '\r') break;
     Serial.write(c);
     d += c;
+    
   }
 
   // if the server's disconnected, stop the client
