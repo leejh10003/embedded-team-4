@@ -73,6 +73,19 @@ void loop()
   while (client.available()) {
     char c = client.read();
     Serial.write(c);
+
+    StaticJsonDocument<200> doc;
+    auto error = deserializeJson(doc, c);
+
+    if (error) {
+      Serial.print(F("deserializeJson() failed with code "));
+      Serial.println(error.c_str());
+      return;
+    }
+    const char* lb = doc["label"];
+    const char* ki = doc["kind"];
+    long registertime = doc["registered_at"];
+    long maxavailable = doc["max_availability"];
   }
 
   // if the server's disconnected, stop the client
