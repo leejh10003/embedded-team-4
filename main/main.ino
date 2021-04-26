@@ -96,25 +96,11 @@ void loop()
 {
   // if there are incoming bytes available
   // from the server, read them and print them
+  const char* d;
   while (client.available()) {
-    const char* c = client.read();
+    char c = client.read();
     Serial.write(c);
-
-    StaticJsonDocument<200> doc;
-    auto error = deserializeJson(doc, c);
-
-    if (error) {
-      Serial.print(F("deserializeJson() failed with code "));
-      Serial.println(error.c_str());
-      return;
-    }
-    
-    stock[index].lb = doc["label"];
-    stock[index].ki = doc["kind"];
-    stock[index].registertime = doc["registered_at"];
-    stock[index].maxavailable = doc["max_availability"];
-
-    index++;
+    d += c;
   }
 
   // if the server's disconnected, stop the client
@@ -125,5 +111,23 @@ void loop()
 
     // do nothing forevermore
     while (true);
+  }
+  
+  if(d != NULL){
+  StaticJsonDocument<200> doc;
+
+  auto error = deserializeJson(doc, d);
+  if (error) {
+      Serial.print(F("deserializeJson() failed with code "));
+      Serial.println(error.c_str());
+      return;
+  }
+
+  stock[index].lb = doc["label"];
+  stock[index].ki = doc["kind"];
+  stock[index].registertime = doc["registered_at"];
+  stock[index].maxavailable = doc["max_availability"];
+
+  index++;
   }
 }
