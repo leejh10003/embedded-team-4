@@ -1,6 +1,5 @@
 #include <WiFiEsp.h>
 #include <ArduinoJson.h>
-#include "WiFiEsp.h"
 
 // Emulate Serial1 on pins 6/7 if not present
 #ifndef HAVE_HWSERIAL1
@@ -15,8 +14,35 @@ int status = WL_IDLE_STATUS;     // the Wifi radio's status
 
 char server[] = ""; // 서버 API가 구현되면 채워 넣어야 함.
 
+struct {
+  const char* lb;
+  const char* ki;
+  long registertime;
+  long maxavailable;
+} stock[20];
+
+int index = 0;
+
 // Initialize the Ethernet client object
 WiFiEspClient client;
+
+void printWifiStatus()
+{
+  // print the SSID of the network you're attached to
+  Serial.print("SSID: ");
+  Serial.println(WiFi.SSID());
+
+  // print your WiFi shield's IP address
+  IPAddress ip = WiFi.localIP();
+  Serial.print("IP Address: ");
+  Serial.println(ip);
+
+  // print the received signal strength
+  long rssi = WiFi.RSSI();
+  Serial.print("Signal strength (RSSI):");
+  Serial.print(rssi);
+  Serial.println(" dBm");
+}
 
 void setup()
 {
@@ -71,7 +97,7 @@ void loop()
   // if there are incoming bytes available
   // from the server, read them and print them
   while (client.available()) {
-    char c = client.read();
+    const char* c = client.read();
     Serial.write(c);
 
     StaticJsonDocument<200> doc;
@@ -82,10 +108,13 @@ void loop()
       Serial.println(error.c_str());
       return;
     }
-    const char* lb = doc["label"];
-    const char* ki = doc["kind"];
-    long registertime = doc["registered_at"];
-    long maxavailable = doc["max_availability"];
+    
+    stock[index].lb = doc["label"];
+    stock[index].ki = doc["kind"];
+    stock[index].registertime = doc["registered_at"];
+    stock[index].maxavailable = doc["max_availability"];
+
+    index++;
   }
 
   // if the server's disconnected, stop the client
@@ -97,22 +126,4 @@ void loop()
     // do nothing forevermore
     while (true);
   }
-}
-
-void printWifiStatus()
-{
-  // print the SSID of the network you're attached to
-  Serial.print("SSID: ");
-  Serial.println(WiFi.SSID());
-
-  // print your WiFi shield's IP address
-  IPAddress ip = WiFi.localIP();
-  Serial.print("IP Address: ");
-  Serial.println(ip);
-
-  // print the received signal strength
-  long rssi = WiFi.RSSI();
-  Serial.print("Signal strength (RSSI):");
-  Serial.print(rssi);
-  Serial.println(" dBm");
 }
