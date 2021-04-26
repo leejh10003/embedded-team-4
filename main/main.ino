@@ -9,8 +9,8 @@
 
 SoftwareSerial Serial1(2, 3); // RX, TX
 
-char ssid[] = "{WIFI SSID}";            // your network SSID (name)
-char pass[] = "{WIFI Password}";        // your network password
+char ssid[] = "Embedded4";            // your network SSID (name)
+char pass[] = "12341234";        // your network password
 int status = WL_IDLE_STATUS;     // the Wifi radio's status
 
 char server[] = ""; // 서버 API가 구현되면 채워 넣어야 함.
