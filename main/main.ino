@@ -1,5 +1,6 @@
 #include <WiFiEsp.h>
 #include <ArduinoJson.h>
+#include <time.h>
 
 // Emulate Serial1 on pins 6/7 if not present
 #ifndef HAVE_HWSERIAL1
@@ -17,14 +18,25 @@ char server[] = ""; // 서버 API가 구현되면 채워 넣어야 함.
 struct {
   const char* lb;
   const char* ki;
-  long registertime;
-  long maxavailable;
+  time_t registertime;
+  time_t maxavailable;
 } stock[20];
 
 int index = 0;
 
 // Initialize the Ethernet client object
 WiFiEspClient client;
+
+int timecal(time_t a, time_t b){
+  int a1 = time(&a);
+  int b1 = time(&b);
+  if((a1-b1) / 60 / 60 / 24 < 2){
+    return 1;
+  }
+  else{
+    return 0;
+  }
+}
 
 void printWifiStatus()
 {
@@ -124,11 +136,12 @@ void loop()
       return;
   }
 
+  time_t present;
   stock[index].lb = doc["label"];
   stock[index].ki = doc["kind"];
-  stock[index].registertime = doc["registered_at"];
+  stock[index].registertime = present;
   stock[index].maxavailable = doc["max_availability"];
-
+  
   index++;
   }
   else{
@@ -136,7 +149,8 @@ void loop()
   }
 
   for(int i = 0; i < index; i++){
-    if(){//남은 시간이 얼마 안 남았을 때){
+    time_t now;
+    if(timecal(now, stock[i].registertime + stock[i].maxavailable) == 1){//남은 시간이 얼마 안 남았을 때){
       // 재고정보 display 표시
     }
   }
