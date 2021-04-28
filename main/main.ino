@@ -28,7 +28,7 @@ int index = 0;
 WiFiEspClient client;
 
 int timecal(time_t a, time_t b){
-  if(((a-b) / 60 / 60 / 24) < 2){
+  if(((a-b) / 60 / 60 / 24) <= 2){
     return 1;
   }
   else{
@@ -137,7 +137,7 @@ void loop()
   time_t present;
   stock[index].lb = doc["label"];
   stock[index].ki = doc["kind"];
-  stock[index].registertime = present;
+  stock[index].registertime = time(&present);
   stock[index].maxavailable = doc["max_availability"];
   
   index++;
