@@ -28,9 +28,7 @@ int index = 0;
 WiFiEspClient client;
 
 int timecal(time_t a, time_t b){
-  int a1 = time(&a);
-  int b1 = time(&b);
-  if((a1-b1) / 60 / 60 / 24 < 2){
+  if(((a-b) / 60 / 60 / 24) < 2){
     return 1;
   }
   else{
@@ -150,7 +148,7 @@ void loop()
 
   for(int i = 0; i < index; i++){
     time_t now;
-    if(timecal(now, stock[i].registertime + stock[i].maxavailable) == 1){//남은 시간이 얼마 안 남았을 때){
+    if(timecal(time(&now),stock[i].registertime + stock[i].maxavailable)){//남은 시간이 얼마 안 남았을 때){
       // 재고정보 display 표시
     }
   }
