@@ -27,18 +27,17 @@ char server[] = "http://ec2-13-125-229-44.ap-northeast-2.compute.amazonaws.com";
 /*
  * From here, authored by Lee, JunHyuk
  */
-class ImageProcess{
+class ImageProcess{ //서버에 요청을 보내고, 결과로 온 json해석
   private:
   static WiFiEspClient client;
   static StaticJsonDocument<200> getInfoFromServer(const char* endpoint/*TODO: Image를 위한 argument 추가*/){
-    client.connect(server, 80);
-    ImageProcess::client.connect(server, 80);
+    ImageProcess::client.connect(endpoint, 80);
     const char* d;
     while (client.available()) {
       char c = client.read();
-      if(c == '\r') break;
+      if(c == '\r') break; //끝났다면 while을 break
       Serial.write(c);
-      d += c;   
+      d += c;  //Python에서 작업한 것으로 추정. C++에서는 이렇게 작업 불가 
     }
     if (!client.connected()) {
       Serial.println();
@@ -50,7 +49,7 @@ class ImageProcess{
     
       auto error = deserializeJson(doc, d);
       if (error) {
-          Serial.print(F("deserializeJson() failed with code "));
+          Serial.print(F("deserializeJson() failed with code ")); //F가 무엇인지??
           Serial.println(error.c_str());
       } else {
         return doc;
