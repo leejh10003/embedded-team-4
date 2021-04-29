@@ -1,11 +1,17 @@
-#include <WiFiEsp.h>
-#include <ArduinoJson.h>
-#include <time.h>
-
+/*
+ * From here, authored by Yang, Yongjae
+ */
+#include <WiFiEsp.h> // Wifi(ESP8266 - ESP01)용 라이브러리 -> arduino 라이브러리에 있습니다.
+#include <ArduinoJson.h> // Json parsing 용 라이브러리 -> arduino 라이브러리에 있습니다.
+#include <time.h> // timestamp 용 라이브러리 -> 별도의 설치 필요 없음
+#include <LiquidCrystal_I2C.h> // LCD 2004 I2C용 라이브러리
+/*
+ * https://github.com/johnrickman/LiquidCrystal_I2C - github에서 다운로드 받으시고 추가해주시면 됩니다.
+ */
 // Emulate Serial1 on pins 6/7 if not present
 #ifndef HAVE_HWSERIAL1
 #endif
-#include "SoftwareSerial.h"
+#include "SoftwareSerial.h" // 서버 연결 라이브러리 -> arduino 라이브러리에 있습니다.
 
 SoftwareSerial Serial1(2, 3); // RX, TX
 
@@ -14,6 +20,13 @@ char pass[] = "12341234";        // your network password
 int status = WL_IDLE_STATUS;     // the Wifi radio's status
 
 char server[] = "http://ec2-13-125-229-44.ap-northeast-2.compute.amazonaws.com"; // 서버 API가 구현되면 채워 넣어야 함.
+/*
+ * End of implementation from Yang, Yongjae
+ */
+
+/*
+ * From here, authored by Lee, JunHyuk
+ */
 class ImageProcess{
   private:
   static WiFiEspClient client;
@@ -55,7 +68,13 @@ class ImageProcess{
   }
 };
 static WiFiEspClient ImageProcess::client;
+/*
+ * End of implementation from Lee, JunHyuk
+ */
 
+/*
+ * From here, authorized by Yang, Yongjae
+ */
 struct {
   const char* lb;
   const char* ki;
@@ -142,6 +161,55 @@ void setup()
     client.println();
   }*/
 }
+/*
+ * From here, authorized by Park, Jihun
+ */
+class LCDPrinter{
+  public:
+  static const int lcdAddress = 0x27;
+  static const int lcdColumns = 20;
+  static const int lcdRows = 4;
+  private:
+  static LiquidCrystal_I2C lcd;
+  public:
+  static void string_print(int cursor_num, String line);
+};
+static LiquidCrystal_I2C LCDPrinter::lcd(LCDPrinter::lcdAddress, LCDPrinter::lcdColumns, LCDPrinter::lcdRows);
+static void LCDPrinter::string_print(int cursor_num, String line){
+  lcd.setCursor(0,cursor_num);
+  int ilen = line.length();
+  String temp;
+  if(ilen <= lcdColumns){
+    temp = line;
+    for(int i = 0; i< lcdColumns - ilen ; i++){
+      temp += "";
+    }
+    lcd.print(temp);
+    delay(5000);
+  } 
+  else{
+    String linestringplus = "                    ";
+    linestringplus += line;
+    linestringplus += "                    ";
+    ilen = linestringplus.length();
+    for(int i = 1 ; i < ilen - lcdColumns ; i++){
+      lcd.setCursor(0,1);
+      int end;
+      if(ilen < i + lcdColumns){
+        end = ilen;
+      }
+      else{
+        end = i + lcdColumns;
+      }
+    temp = linestringplus.substring(i,end);
+    lcd.print(temp);
+    delay(500);
+    }
+  }
+}
+/*
+ * End of implementaion from Park, Jihun
+ */ 
 
 void loop()
 {
@@ -157,8 +225,27 @@ void loop()
 
   for(int i = 0; i < index; i++){
     time_t now;
-    if(timecal(time(&now),stock[i].registertime + stock[i].maxavailable)){//남은 시간이 얼마 안 남았을 때){
+    if(timecal(time(&now),stock[i].registertime + stock[i].maxavailable)){
+     /*
+     * End of implementaion from Yang, Yongjae
+     */ 
+
+     /*
+    * From here, authorized by Park, Jihun
+    */
+    String line1 = "The expiration date"; 
+    String line2 = "Milk's Expiration date has passed 3 days.";
+    // 임시 출력용 string 
+    LCDPrinter::string_print(0, line1);
+    LCDPrinter::string_print(1, line2);
       // 재고정보 display 표시
+     /*
+    * End of implementation from Park, Jihun
+    */     
     }
   }
 }
+
+/*
+* End of implementaion from Park, Jihun
+ */
