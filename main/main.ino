@@ -1,5 +1,6 @@
 #include <WiFiEsp.h>
 #include <ArduinoJson.h>
+#include <time.h>
 
 // Emulate Serial1 on pins 6/7 if not present
 #ifndef HAVE_HWSERIAL1
@@ -58,14 +59,23 @@ static WiFiEspClient ImageProcess::client;
 struct {
   const char* lb;
   const char* ki;
-  long registertime;
-  long maxavailable;
+  time_t registertime;
+  time_t maxavailable;
 } stock[20];
 
 int index = 0;
 
 // Initialize the Ethernet client object
 
+
+int timecal(time_t a, time_t b){
+  if(((a-b) / 60 / 60 / 24) <= 2){
+    return 1;
+  }
+  else{
+    return 0;
+  }
+}
 
 void printWifiStatus()
 {
@@ -137,19 +147,17 @@ void loop()
 {
   StaticJsonDocument<200> foodInfo = ImageProcess::foodInfoGet(); //TODO: Image를 받아와야 함
   StaticJsonDocument<200> qrCodeData = ImageProcess::decodeQrCode(); //TODO: Image를 받아와야 함
+  time_t present;
   stock[index].lb = qrCodeData["data"];
   stock[index].ki = foodInfo["name"];
-  //stock[index].registertime = doc["registered_at"]; //서버에서 반환하지 않습니다. client에서 결정해야 합니다.
-  stock[index].maxavailable = foodInfo["max_availability"]; //조만간 서버에서 결정된 값으로 반환할 예정입니다. 현재는 psuedo하게 값을 10으로 반환합니다.
-
-  /*index++;
-  }
-  else{
-    index = 0;
-  }*/
+  stock[index].registertime = time(&present);
+  stock[index].maxavailable = foodInfo["max_availability"];
+  
+  index++;
 
   for(int i = 0; i < index; i++){
-    if(true){//TODO: 남은 시간이 얼마 안 남았을 때){
+    time_t now;
+    if(timecal(time(&now),stock[i].registertime + stock[i].maxavailable)){//남은 시간이 얼마 안 남았을 때){
       // 재고정보 display 표시
     }
   }
