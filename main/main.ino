@@ -32,7 +32,7 @@ class ImageProcess{ //서버에 요청을 보내고, 결과로 온 json해석
   static WiFiEspClient client;
   static StaticJsonDocument<200> getInfoFromServer(const char* endpoint/*TODO: Image를 위한 argument 추가*/){
     ImageProcess::client.connect(endpoint, 80);
-    const char* d;
+    String d;
     while (client.available()) {
       char c = client.read();
       if(c == '\r') break; //끝났다면 while을 break
