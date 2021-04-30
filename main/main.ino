@@ -15,6 +15,10 @@
 
 SoftwareSerial Serial1(2, 3); // RX, TX
 
+#ifndef LIMIT_DISTNACE_TO_OBJECT
+#define LIMIT_DISTNACE_TO_OBJECT 5
+#endif
+
 char ssid[] = "Embedded4";            // your network SSID (name)
 char pass[] = "12341234";        // your network password
 int status = WL_IDLE_STATUS;     // the Wifi radio's status
@@ -58,11 +62,11 @@ class ImageProcess{ //서버에 요청을 보내고, 결과로 온 json해석
   }
   public:
   static StaticJsonDocument<200> decodeQrCode/*TODO: Need to determine arguments for decodeQrCode*/(){
-    const char endpoint[] = "http://ec2-13-125-229-44.ap-northeast-2.compute.amazonaws.com/qrcode";
+    const char endpoint[] PROGMEM = "http://ec2-13-125-229-44.ap-northeast-2.compute.amazonaws.com/qrcode";
     return ImageProcess::getInfoFromServer(endpoint);
   }
   static StaticJsonDocument<200> foodInfoGet(/*TODO: Need to determine arguments for foodInfoGet*/){
-    const char endpoint[] = "http://ec2-13-125-229-44.ap-northeast-2.compute.amazonaws.com/food";
+    const char endpoint[] PROGMEM = "http://ec2-13-125-229-44.ap-northeast-2.compute.amazonaws.com/food";
     return ImageProcess::getInfoFromServer(endpoint);
   }
 };
@@ -81,7 +85,10 @@ struct {
   time_t maxavailable;
 } stock[20];
 
+double duration, distance;
 int index = 0;
+int trigPin = 7;
+int echoPin = A0;
 
 // Initialize the Ethernet client object
 
@@ -121,45 +128,28 @@ class LCDPrinter{
   static const int lcdColumns = 20;
   public:
   static LiquidCrystal_I2C LCDPrinter::lcd;
-  static void string_print(int cursor_num, String line);
+  static void string_print(int offset, int cursor_num, String line);
 };
 static LiquidCrystal_I2C LCDPrinter::lcd(0x27, LCDPrinter::lcdColumns, 2);
-static void LCDPrinter::string_print(int cursor_num, String line){
+static void LCDPrinter::string_print(int offset, int cursor_num, String line){
+  line += " ";
   lcd.setCursor(0,cursor_num);
   int ilen = line.length();
-  String temp;
-  if(ilen <= lcdColumns){
-    lcd.print(line);
-    delay(500);
-  } 
-  else{
-    String Lineplus = " " + line + " ";
-    ilen = Lineplus.length();
-    for(int i = 1 ; i < ilen - lcdColumns ; i++){
-      lcd.setCursor(0,1);
-      int end;
-      if(ilen < i + lcdColumns){
-        end = ilen;
-      }
-      else{
-        end = i + lcdColumns;
-      }
-    temp = Lineplus.substring(i,end);
-    lcd.print(temp);
-    delay(500);
-    }
-  }
-}
+  lcd.print(line.substring(offset, min(ilen, offset + lcdColumns)));
+} //offset - substring의 시작점 / cursor_num - LCD 디스플레이의 몇번째 줄에 출력할 것인지 / line - 출력하려는 문자열
 /*
  * End of implementaion from Park, Jihun
  */ 
 
 void setup()
 {
+  // 초음파 센서를 위한 setup
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, OUTPUT);
   // initialize serial for debugging
   Serial.begin(9600);
 
-  // initialize serial for ESP module
+  // initialize serial for ESP module, softwear serial
   Serial1.begin(9600);
 
   // initialize ESP module
@@ -206,93 +196,51 @@ void setup()
     client.println();
   }*/
 }
-/*
- * From here, authorized by Park, Jihun
- */
-class LCDPrinter{
+
+class ObjectDetection {
   public:
-  static const int lcdAddress = 0x27;
-  static const int lcdColumns = 20;
-  static const int lcdRows = 4;
-  private:
-  static LiquidCrystal_I2C lcd;
-  public:
-  static void string_print(int cursor_num, String line);
-};
-static LiquidCrystal_I2C LCDPrinter::lcd(LCDPrinter::lcdAddress, LCDPrinter::lcdColumns, LCDPrinter::lcdRows);
-static void LCDPrinter::string_print(int cursor_num, String line){
-  lcd.setCursor(0,cursor_num);
-  int ilen = line.length();
-  String temp;
-  if(ilen <= lcdColumns){
-    temp = line;
-    for(int i = 0; i< lcdColumns - ilen ; i++){
-      temp += "";
-    }
-    lcd.print(temp);
-    delay(5000);
-  } 
-  else{
-    String linestringplus = "                    ";
-    linestringplus += line;
-    linestringplus += "                    ";
-    ilen = linestringplus.length();
-    for(int i = 1 ; i < ilen - lcdColumns ; i++){
-      lcd.setCursor(0,1);
-      int end;
-      if(ilen < i + lcdColumns){
-        end = ilen;
-      }
-      else{
-        end = i + lcdColumns;
-      }
-    temp = linestringplus.substring(i,end);
-    lcd.print(temp);
-    delay(500);
-    }
+  static void object_in_distance(){
+    digitalWrite(trigPin, LOW);
+    delayMicroseconds(2);
+    digitalWrite(trigPin, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(trigPin, LOW);
+
+    duration = pulseIn(echoPin, HIGH);
+    distance = duration / 29 / 2;
+    return distance < LIMIT_DISTNACE_TO_OBJECT ? true : false;
   }
 }
-/*
- * End of implementaion from Park, Jihun
- */ 
-
 
 void loop()
 {
-  // 임시 출력용 string 
-  StaticJsonDocument<200> foodInfo = ImageProcess::foodInfoGet(); //TODO: Image를 받아와야 함
-  StaticJsonDocument<200> qrCodeData = ImageProcess::decodeQrCode(); //TODO: Image를 받아와야 함
-  time_t present;
-  stock[index].lb = qrCodeData["data"];
-  stock[index].ki = foodInfo["name"];
-  stock[index].registertime = time(&present);
-  stock[index].maxavailable = foodInfo["max_availability"];
-  
-  index++;
+  if (ObjectDetection::object_in_distance() == true){ // 초음파센서를 통해서 감지된 새로운 식품 등록, TODO: 거리 탐지
+    client.println("food");
+    StaticJsonDocument<200> foodInfo = ImageProcess::foodInfoGet(); //TODO: Image를 받아와야 함
+    client.println("http://www.bizhows.com");
+    StaticJsonDocument<200> qrCodeData = ImageProcess::decodeQrCode(); //TODO: Image를 받아와야 함
+    time_t present;
+    stock[index].lb = qrCodeData["data"]; //qr코드를 디코딩한 값.
+    stock[index].ki = foodInfo["name"]; //재고의 종류 -> string으로 표현
+    stock[index].registertime = time(&present); //등록일 -> datetime or timestamp interger사용.
+    stock[index].maxavailable = foodInfo["max_availability"]; //저장가능시간, timediff or timestamp integer
+  } 
 
+  String arr = ''; // 기한이 얼마 남지 않은 음식 목록 string
   for(int i = 0; i < index; i++){
     time_t now;
-    if(timecal(time(&now),stock[i].registertime + stock[i].maxavailable)){
-     /*
-     * End of implementaion from Yang, Yongjae
-     */ 
-
-     /*
-    * From here, authorized by Park, Jihun
-    */
-    String line1 = F("The expiration date"); 
-    String line2 = F("Milk's Expiration date has passed 3 days.");
-    LCDPrinter::string_print(0, line1);
-    LCDPrinter::string_print(1, line2);
-    // 재고정보 display 표시
-     /*
-    * End of implementation from Park, Jihun
-    */     
+    if(timecal(stock[i].registertime + stock[i].maxavailable, time(&now))){ //시간이 등록시간+저장가능시간 - 현재시간 <= n=2면 true    
+      arr = arr + stock[i].ki + ', '; //arr에 그 index 재고의 종류 표시.
     }
   }
 
+  // 재고정보 display 표시
+  String line1 = F("The Expiration Date"); //맨 윗줄
+  String line2 = "Expiration date of" + arr + "has remained 3 days. "; //두 번째 줄 -> 유통기한 임박 재고들 표시.
+  LCDPrinter::string_print(0 ,0, line1); // line1의 길이가 20이상이 아닌 경우
+  for(int i = 0; i < line2.length(); i++){
+    LCDPrinter::string_print(i ,1, line2); // line2의 길이가 20이상인 경우
+    delay(500);
+  }   
 }
 
-/*
-* End of implementaion from Park, Jihun
- */
