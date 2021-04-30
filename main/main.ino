@@ -41,7 +41,7 @@ class ImageProcess{ //서버에 요청을 보내고, 결과로 온 json해석
     }
     if (!client.connected()) {
       Serial.println();
-      Serial.println("Disconnecting from server...");
+      Serial.println(F("Disconnecting from server..."));
       client.stop();
     }
     if(d != NULL){
@@ -98,20 +98,61 @@ int timecal(time_t a, time_t b){
 void printWifiStatus()
 {
   // print the SSID of the network you're attached to
-  Serial.print("SSID: ");
+  Serial.print(F("SSID: "));
   Serial.println(WiFi.SSID());
 
   // print your WiFi shield's IP address
   IPAddress ip = WiFi.localIP();
-  Serial.print("IP Address: ");
+  Serial.print(F("IP Address: "));
   Serial.println(ip);
 
   // print the received signal strength
   long rssi = WiFi.RSSI();
-  Serial.print("Signal strength (RSSI):");
+  Serial.print(F("Signal strength (RSSI):"));
   Serial.print(rssi);
-  Serial.println(" dBm");
+  Serial.println(F(" dBm"));
 }
+
+/*
+ * From here, authorized by Park, Jihun
+ */
+class LCDPrinter{
+  private:
+  static const int lcdColumns = 20;
+  public:
+  static LiquidCrystal_I2C LCDPrinter::lcd;
+  static void string_print(int cursor_num, String line);
+};
+static LiquidCrystal_I2C LCDPrinter::lcd(0x27, LCDPrinter::lcdColumns, 2);
+static void LCDPrinter::string_print(int cursor_num, String line){
+  lcd.setCursor(0,cursor_num);
+  int ilen = line.length();
+  String temp;
+  if(ilen <= lcdColumns){
+    lcd.print(line);
+    delay(500);
+  } 
+  else{
+    String Lineplus = " " + line + " ";
+    ilen = Lineplus.length();
+    for(int i = 1 ; i < ilen - lcdColumns ; i++){
+      lcd.setCursor(0,1);
+      int end;
+      if(ilen < i + lcdColumns){
+        end = ilen;
+      }
+      else{
+        end = i + lcdColumns;
+      }
+    temp = Lineplus.substring(i,end);
+    lcd.print(temp);
+    delay(500);
+    }
+  }
+}
+/*
+ * End of implementaion from Park, Jihun
+ */ 
 
 void setup()
 {
@@ -123,10 +164,15 @@ void setup()
 
   // initialize ESP module
   WiFi.init(&Serial1);
+  
+  // initialize LCD
+  LCDPrinter::lcd.init();
+  LCDPrinter::lcd.clear();
+  LCDPrinter::lcd.backlight();
 
   // check for the presence of the shield
   if (WiFi.status() == WL_NO_SHIELD) {
-    Serial.println("WiFi shield not present");
+    Serial.println(F("WiFi shield not present"));
 
     // don't continue
     while (true);
@@ -134,7 +180,7 @@ void setup()
 
   // attempt to connect to WiFi network
   while ( status != WL_CONNECTED) {
-    Serial.print("Attempting to connect to WPA SSID: ");
+    Serial.print(F("Attempting to connect to WPA SSID: "));
     Serial.println(ssid);
 
     // Connect to WPA/WPA2 network
@@ -142,12 +188,12 @@ void setup()
   }
   
   // you're connected now, so print out the data
-  Serial.println("You're connected to the network");
+  Serial.println(F("You're connected to the network"));
 
   printWifiStatus();
   
   Serial.println();
-  Serial.println("Starting connection to server...");
+  Serial.println(F("Starting connection to server..."));
 
   // if you get a connection, report back via serial
   /*if (client.connect(server, 80)) {
@@ -210,8 +256,10 @@ static void LCDPrinter::string_print(int cursor_num, String line){
  * End of implementaion from Park, Jihun
  */ 
 
+
 void loop()
 {
+  // 임시 출력용 string 
   StaticJsonDocument<200> foodInfo = ImageProcess::foodInfoGet(); //TODO: Image를 받아와야 함
   StaticJsonDocument<200> qrCodeData = ImageProcess::decodeQrCode(); //TODO: Image를 받아와야 함
   time_t present;
@@ -232,17 +280,17 @@ void loop()
      /*
     * From here, authorized by Park, Jihun
     */
-    String line1 = "The expiration date"; 
-    String line2 = "Milk's Expiration date has passed 3 days.";
-    // 임시 출력용 string 
+    String line1 = F("The expiration date"); 
+    String line2 = F("Milk's Expiration date has passed 3 days.");
     LCDPrinter::string_print(0, line1);
     LCDPrinter::string_print(1, line2);
-      // 재고정보 display 표시
+    // 재고정보 display 표시
      /*
     * End of implementation from Park, Jihun
     */     
     }
   }
+
 }
 
 /*
