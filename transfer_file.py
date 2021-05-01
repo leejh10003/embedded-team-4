@@ -8,29 +8,9 @@ def chunks(lst, n):
 if __name__ == '__main__':
     try:
         link = txfer.SerialTransfer('/dev/cu.usbmodem13401') #Windows에서는 COM1 등에 해당함
-        link.open()
-        time.sleep(2)
-        while True:
-            while not link.available():
-                if link.status < 0:
-                    if link.status == txfer.CRC_ERROR:
-                        print('ERROR: CRC_ERROR')
-                    elif link.status == txfer.PAYLOAD_ERROR:
-                        print('ERROR: PAYLOAD_ERROR')
-                    elif link.status == txfer.STOP_BYTE_ERROR:
-                        print('ERROR: STOP_BYTE_ERROR')
-            rec_str_   = link.rx_obj(obj_type=type("hello"),
-                                                obj_byte_size=3)
-            print(rec_str_)
-
-    except e:
-        print(e)
-"""
-if __name__ == '__main__':
-    try:
-        link = txfer.SerialTransfer('/dev/cu.usbmodem13401') #Windows에서는 COM1 등에 해당함
-        bytes = list(chunks(base64.b64encode(open('/Users/leejunhyuk/Desktop/XHWnX.png', 'rb').read()).decode('ascii'), 60)) #QR 코드 예시
-
+        raw = base64.b64encode(open('/Users/leejunhyuk/Desktop/XHWnX.png', 'rb').read()).decode('ascii')
+        print(len(raw))
+        bytes = list(chunks(raw, 60)) #QR 코드 예시
         
         link.open()
         time.sleep(2) # 미리 초기화해 둠
@@ -55,12 +35,13 @@ if __name__ == '__main__':
                         print('ERROR: {}'.format(link.status))
             # 응답 해석
             rec_list_  = link.rx_obj(obj_type=type(list_),
-                                     obj_byte_size=list_size,
+                                     obj_byte_size=3,
                                      list_format='i')
             print('SENT: {} '.format(list_))
             print('RCVD: {}'.format(rec_list_))
             print(' ')
-            if list_ == rec_list_:
+            index += 1
+            """if list_ == rec_list_:
                 if index == len(bytes) - 1:
                     ###################################################################
                     # Send a string
@@ -105,6 +86,7 @@ if __name__ == '__main__':
                     index += 1
             else:
                 continue
+              """
     
     except KeyboardInterrupt:
         try:
@@ -119,4 +101,4 @@ if __name__ == '__main__':
         try:
             link.close()
         except:
-            pass"""
+            pass
